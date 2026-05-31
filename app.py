@@ -2,27 +2,39 @@ import os
 import requests
 import streamlit as st
 import tensorflow as tf
-from PIL import Image
-import numpy as np
-
-st.set_page_config(page_title="Brain Tumor Classifier", layout="centered")
-st.title("🧠 Brain Tumor MRI Image Classification")
-
-model = None
 
 @st.cache_resource
 def load_production_model():
-    # Local path name on the Streamlit Linux cloud container
-    local_model_path = "tlm.keras"
+    # Target file path on Streamlit Cloud's local directory
+    local_model_path = "tlm_runtime.keras"
     
     if not os.path.exists(local_model_path):
         with st.spinner("📥 Downloading AI Model directly from Google Drive... Please wait."):
-            # 💡 REPLACE the ID below with your actual Google Drive File ID!
-            FILE_ID = "15crJHVBXoqqQh9GAmOJzKRJ3ktdHeRqB" 
-            direct_download_url = f"https://docs.google.com/uc?export=download&id={FILE_ID}"
+            # Your verified Google Drive File ID
+            FILE_ID = "15crJHVBXoqqQh9GAmOJzKRJ3ktdHeRqB"
             
-            # Use requests to download the large file chunks smoothly
-            response = requests.get(direct_download_url, stream=True)
+            # Base URL for the Google Drive download API
+            URL = "https://docs.google.com/uc?export=download"
+            
+            # Start a persistent session to handle security cookies
+            session = requests.Session()
+            
+            # First request to check for large-file confirmation page
+            response = session.get(URL, params={'id': FILE_ID}, stream=True)
+            
+            # Try to extract the confirmation token if Google Drive prompts a warning page
+            token = None
+            for key, value in response.cookies.items():
+                if key.startswith('download_warning'):
+                    token = value
+                    break
+            
+            # If a confirmation token is required, send a second request with the token included
+            if token:
+                params = {'id': FILE_ID, 'confirm': token}
+                response = session.get(URL, params=params, stream=True)
+            
+            # Save the raw binary chunks to the server disk
             if response.status_code == 200:
                 with open(local_model_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
@@ -30,17 +42,8 @@ def load_production_model():
                             f.write(chunk)
                 st.success("🤖 Model binary pulled successfully from Google Drive!")
             else:
-                st.error(f"❌ Failed to download from Google Drive. Status Code: {response.status_code}")
+                st.error(f"❌ Download failed. Google Drive API Status: {response.status_code}")
                 return None
-            
+                
+    # Unpack the verified binary file zip archive smoothly
     return tf.keras.models.load_model(local_model_path, compile=False, safe_mode=False)
-
-try:
-    model = load_production_model()
-    if model is not None:
-        st.sidebar.success("✅ Deep learning model active!")
-except Exception as e:
-    st.sidebar.error("❌ Model Initialization Failed.")
-    st.sidebar.exception(e)
-
-# --- Keep the rest of your UI and prediction logic exactly the same ---
