@@ -18,8 +18,8 @@ def load_production_model():
     if not os.path.exists(local_model_path):
         with st.spinner("📥 Downloading AI Model directly from Google Drive... Please wait."):
             # 💡 REPLACE the ID below with your actual Google Drive File ID!
-            FILE_ID = "1A2B3C4D5E6F7G8H9I0J_K_L_M" 
-            direct_download_url = f"https://docs.google.com/uc?export=download&id={15crJHVBXoqqQh9GAmOJzKRJ3ktdHeRqB}"
+            FILE_ID = "15crJHVBXoqqQh9GAmOJzKRJ3ktdHeRqB" 
+            direct_download_url = f"https://docs.google.com/uc?export=download&id={FILE_ID}"
             
             # Use requests to download the large file chunks smoothly
             response = requests.get(direct_download_url, stream=True)
